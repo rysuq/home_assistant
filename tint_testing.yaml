@@ -3,7 +3,7 @@ blueprint:
   domain: automation
   input:
     remote:
-      name: Remote mqtt topic
+      name: pilot
       description: This must be the TOPIC from zigbee2mqtt. For example z2m/remote_1
       selector:
         text:
