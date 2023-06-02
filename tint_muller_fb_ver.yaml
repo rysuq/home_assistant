@@ -1,0 +1,210 @@
+blueprint:
+  name: Muller Licht Remote (Zigbee2MQTT)
+  domain: automation
+  input:
+    remote:
+      name: Remote mqtt topic
+      description: This must be the TOPIC from zigbee2mqtt. For example z2m/remote_1
+      selector:
+        text:
+    target_light_1:
+      name: Light 1
+      description: Lights to control for 1 (*--)
+      selector:
+        target:
+          entity:
+            domain: light
+    target_light_2:
+      name: Light 2
+      description: Lights to control for 2 (-*-)
+      selector:
+        target:
+          entity:
+            domain: light
+    target_light_3:
+      name: Light 3
+      description: Lights to control for 3 (--*)
+      selector:
+        target:
+          entity:
+            domain: light
+    step:
+      name: Dimming step in percent
+      default: 10
+      selector:
+        number:
+          min: 0.0
+          max: 50.0
+          mode: slider
+          step: 1.0
+          unit_of_measurement: "%"
+    scene_3:
+      name: Reading scene
+      selector:
+        target:
+    scene_1:
+      name: Sunset scene
+      selector:
+        target:
+    scene_2:
+      name: Party scene
+      selector:
+        target:
+    scene_6:
+      name: Night scene
+      selector:
+        target:
+    scene_4:
+      name: Fire scene
+      selector:
+        target:
+    scene_5:
+      name: Romantic scene
+      selector:
+        target:
+trigger:
+  - platform: mqtt
+    topic: !input "remote"
+
+condition: []
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ action_name=="on" }}'
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_device }}"
+      - conditions:
+          - condition: template
+            value_template: '{{ action_name=="off" }}'
+        sequence:
+          - service: light.turn_off
+            target: "{{ target_device }}"
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="scene_1") 
+              }}
+        sequence:
+          - service: homeassistant.turn_on
+            target: !input 'scene_1'
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="scene_2") 
+              }}        
+        sequence:
+          - service: homeassistant.turn_on
+            target: !input 'scene_2'
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="scene_3") 
+              }}
+        sequence:
+          - service: homeassistant.turn_on
+            target: !input 'scene_3'
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="scene_4") 
+              }}
+        sequence:
+          - service: homeassistant.turn_on
+            target: !input 'scene_4'
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="scene_5") 
+              }}
+        sequence:
+          - service: homeassistant.turn_on
+            target: !input 'scene_5'
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="scene_6") 
+              }}
+        sequence:
+          - service: homeassistant.turn_on
+            target: !input 'scene_6'
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="color_temperature_move") 
+              }}
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_device }}"
+            data_template:
+              color_temp: "{{ action_color_temp }}"
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="brightness_step_down") 
+              }}
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_device }}"
+            data_template:
+              brightness_step_pct: "{{ negative_step }}"
+              transition: 1
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="brightness_step_up") 
+              }}
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_device }}"
+            data_template:
+              brightness_step_pct: "{{ step }}"
+              transition: 1
+      - conditions:
+          - condition: template
+            value_template: |-
+              {{ 
+                 (action_name=="color_move") 
+              }}
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_device }}"
+            data_template:
+              xy_color:
+                - "{{trigger.payload_json.action_color.x}}"
+                - "{{trigger.payload_json.action_color.y}}"
+    default:
+      - service: logbook.log
+        data:
+          name: Oops
+          message: Unhandled remote action "{{ action_name }}" --- "{{ action_color_temp }}" --- "{{ action_color }}"
+mode: single
+variables:
+  step: !input "step"
+  negative_step: "{{ -1 * (step | int) }}"
+  action_color_temp: '{{ trigger.payload_json.action_color_temperature }}'
+  action_color: '{{ trigger.payload_json.action_color }}'
+  action_name: '{{ trigger.payload_json.action }}'
+  target_light_1: !input 'target_light_1'
+  target_light_2: !input 'target_light_2'
+  target_light_3: !input 'target_light_3'
+  target_device: |-
+    {%- if trigger.payload_json.action_group==16388 -%} 
+    {{ target_light_1 }}
+    {%- elif trigger.payload_json.action_group==16389 -%}
+    {{ target_light_2 }}
+    {%- elif trigger.payload_json.action_group==16390 -%} 
+    {{ target_light_3 }}
+    {%- else -%} 
+    unknown
+    {%- endif -%}
